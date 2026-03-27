@@ -1,0 +1,604 @@
+import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+
+/// ================= MAIN =================
+void main() {
+  runApp(
+    MultiProvider(
+      providers: [
+        ChangeNotifierProvider(create: (_) => AuthProvider()),
+        ChangeNotifierProvider(create: (_) => StudentData()),
+      ],
+      child: const MyApp(),
+    ),
+  );
+}
+
+/// ================= APP =================
+class MyApp extends StatelessWidget {
+  const MyApp({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return const MaterialApp(
+      debugShowCheckedModeBanner: false,
+      home: LoginScreen(),
+    );
+  }
+}
+
+/// ================= ANIMATION ROUTE =================
+Route slideRoute(Widget page) {
+  return PageRouteBuilder(
+    transitionDuration: const Duration(milliseconds: 300),
+    pageBuilder: (_, _, _) => page,
+    transitionsBuilder: (_, anim, _, child) {
+      return SlideTransition(
+        position: Tween(
+          begin: const Offset(1, 0),
+          end: Offset.zero,
+        ).animate(anim),
+        child: child,
+      );
+    },
+  );
+}
+
+/// ================= MODEL =================
+class Student {
+  final int id;
+  final String registerNumber;
+  final String name;
+  final String course;
+  final DateTime dob;
+  final String address;
+  final String studentMobile;
+  final String fatherName;
+  final String fatherMobile;
+  final String motherName;
+  final String motherMobile;
+  final String? guardianName;
+  final String? guardianMobile;
+
+  Student({
+    required this.id,
+    required this.registerNumber,
+    required this.name,
+    required this.course,
+    required this.dob,
+    required this.address,
+    required this.studentMobile,
+    required this.fatherName,
+    required this.fatherMobile,
+    required this.motherName,
+    required this.motherMobile,
+    this.guardianName,
+    this.guardianMobile,
+  });
+}
+
+/// ================= AUTH =================
+class AuthProvider extends ChangeNotifier {
+  final Map<String, String> _users = {
+    "admin": "1234",
+    "test": "pass",
+  }; // preloaded users
+  String? _currentUser;
+
+  bool get isRegistered => _users.isNotEmpty;
+  String? get username => _currentUser;
+
+  void register(String user, String pass) {
+    if (_users.containsKey(user)) return;
+    _users[user] = pass;
+    notifyListeners();
+  }
+
+  bool login(String user, String pass) {
+    if (_users.containsKey(user) && _users[user] == pass) {
+      _currentUser = user;
+      notifyListeners();
+      return true;
+    }
+    return false;
+  }
+
+  void logout() {
+    _currentUser = null;
+    notifyListeners();
+  }
+}
+
+/// ================= PROVIDER =================
+class StudentData extends ChangeNotifier {
+  final List<Student> _students = [];
+
+  List<Student> get students => _students;
+
+  void addStudent(Student s) {
+    _students.add(s);
+    notifyListeners();
+  }
+
+  void deleteStudent(int id) {
+    _students.removeWhere((s) => s.id == id);
+    notifyListeners();
+  }
+
+  List<Student> search(String q) {
+    if (q.isEmpty) return students;
+    return students
+        .where((s) =>
+    s.name.toLowerCase().contains(q.toLowerCase()) ||
+        s.registerNumber.toLowerCase().contains(q.toLowerCase()))
+        .toList();
+  }
+}
+
+/// ================= APP BACKGROUND WIDGET =================
+/// This widget provides a consistent background for screens.
+class AppBackground extends StatelessWidget {
+  final Widget child;
+  const AppBackground({super.key, required this.child});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: const BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            Colors.white,
+            Colors.lightBlueAccent,
+          ],
+        ),
+      ),
+      child: child,
+    );
+  }
+}
+
+/// ================= LOGIN =================
+class LoginScreen extends StatefulWidget {
+  const LoginScreen({super.key});
+
+  @override
+  State<LoginScreen> createState() => _LoginScreenState();
+}
+
+class _LoginScreenState extends State<LoginScreen>
+    with SingleTickerProviderStateMixin {
+  final user = TextEditingController();
+  final pass = TextEditingController();
+  bool obscure = true;
+  late AnimationController _controller;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(seconds: 1),
+    )..forward();
+  }
+
+  @override
+  void dispose() {
+    user.dispose();
+    pass.dispose();
+    _controller.dispose();
+    super.dispose();
+  }
+
+  void login() {
+    final auth = context.read<AuthProvider>();
+    if (auth.login(user.text, pass.text)) {
+      Navigator.pushReplacement(context, slideRoute(const HomeScreen()));
+    } else {
+      ScaffoldMessenger.of(context)
+          .showSnackBar(const SnackBar(content: Text("Invalid Credentials")));
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    // The previous code had a syntax error. 'AppBackground' was not defined
+    // and the structure within the build method was incorrect.
+    // Fixed by defining AppBackground and correcting the widget tree.
+    return AppBackground(
+      child: FadeTransition(
+        opacity: _controller,
+        child: Scaffold(
+          backgroundColor: Colors.transparent, // important to see the background
+          body: Center(
+            child: Padding(
+              padding: const EdgeInsets.all(20),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Text(
+                    "SJB Institute of Technology",
+                    style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
+                  ),
+                  const SizedBox(height: 30),
+                  TextField(
+                    controller: user,
+                    decoration: const InputDecoration(labelText: "Username"),
+                  ),
+                  TextField(
+                    controller: pass,
+                    obscureText: obscure,
+                    decoration: InputDecoration(
+                      labelText: "Password",
+                      suffixIcon: IconButton(
+                        icon: Icon(
+                          obscure ? Icons.visibility : Icons.visibility_off,
+                        ),
+                        onPressed: () => setState(() => obscure = !obscure),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+                  ElevatedButton(onPressed: login, child: const Text("Login")),
+                  TextButton(
+                    onPressed: () => Navigator.push(
+                      context,
+                      slideRoute(const RegisterScreen()),
+                    ),
+                    child: const Text("Register New User"),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// ================= REGISTER =================
+class RegisterScreen extends StatefulWidget {
+  const RegisterScreen({super.key});
+
+  @override
+  State<RegisterScreen> createState() => _RegisterScreenState();
+}
+
+class _RegisterScreenState extends State<RegisterScreen> {
+  final user = TextEditingController();
+  final pass = TextEditingController();
+  bool obscure = true;
+
+  @override
+  void dispose() {
+    user.dispose();
+    pass.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: const Text("Register")),
+      body: Padding(
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          children: [
+            TextField(
+              controller: user,
+              decoration: const InputDecoration(labelText: "Username"),
+            ),
+            TextField(
+              controller: pass,
+              obscureText: obscure,
+              decoration: InputDecoration(
+                labelText: "Password",
+                suffixIcon: IconButton(
+                  icon: Icon(obscure ? Icons.visibility : Icons.visibility_off),
+                  onPressed: () => setState(() => obscure = !obscure),
+                ),
+              ),
+            ),
+            const SizedBox(height: 20),
+            ElevatedButton(
+              onPressed: () {
+                if (user.text.isEmpty || pass.text.isEmpty) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                        content:
+                        Text("Username and Password cannot be empty")),
+                  );
+                  return;
+                }
+
+                context.read<AuthProvider>().register(user.text, pass.text);
+
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text("User '${user.text}' registered!")),
+                );
+
+                Navigator.pop(context);
+              },
+              child: const Text("Register"),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// ================= HOME =================
+class HomeScreen extends StatelessWidget {
+  const HomeScreen({super.key});
+
+  Widget animatedCard(BuildContext ctx, String title, IconData icon, Widget page) {
+    return GestureDetector(
+      onTap: () => Navigator.push(ctx, slideRoute(page)),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        margin: const EdgeInsets.all(8),
+        child: Card(
+          elevation: 4,
+          child: ListTile(
+            leading: Icon(icon),
+            title: Text(title),
+            trailing: const Icon(Icons.arrow_forward),
+          ),
+        ),
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text("Dashboard"),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.account_circle),
+            onPressed: () =>
+                Navigator.push(context, slideRoute(const ProfileScreen())),
+          ),
+        ],
+      ),
+      body: Column(
+        children: [
+          animatedCard(context, "Add Student", Icons.person_add, const AddStudentScreen()),
+          animatedCard(context, "Search Student", Icons.search, const SearchScreen()),
+          animatedCard(context, "Student List", Icons.list, const StudentListScreen()),
+        ],
+      ),
+    );
+  }
+}
+
+/// ================= PROFILE =================
+class ProfileScreen extends StatelessWidget {
+  const ProfileScreen({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    final auth = context.watch<AuthProvider>();
+
+    return Scaffold(
+      appBar: AppBar(title: const Text("Profile")),
+      body: Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Icon(Icons.account_circle, size: 100),
+            const SizedBox(height: 20),
+            Text(auth.username ?? "User"),
+            ElevatedButton(
+              onPressed: () {
+                context.read<AuthProvider>().logout();
+                Navigator.pushAndRemoveUntil(
+                  context,
+                  slideRoute(const LoginScreen()),
+                      (route) => false,
+                );
+              },
+              child: const Text("Logout"),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// ================= ADD STUDENT =================
+class AddStudentScreen extends StatefulWidget {
+  const AddStudentScreen({super.key});
+
+  @override
+  State<AddStudentScreen> createState() => _AddStudentScreenState();
+}
+
+class _AddStudentScreenState extends State<AddStudentScreen> {
+  final name = TextEditingController();
+  final reg = TextEditingController();
+  final course = TextEditingController();
+  final dob = TextEditingController();
+  final address = TextEditingController();
+  final studentMobile = TextEditingController();
+  final fatherName = TextEditingController();
+  final fatherMobile = TextEditingController();
+  final motherName = TextEditingController();
+  final motherMobile = TextEditingController();
+  final guardianName = TextEditingController();
+  final guardianMobile = TextEditingController();
+
+  DateTime? selectedDOB;
+
+  void pickDOB() async {
+    DateTime? date = await showDatePicker(
+      context: context,
+      initialDate: selectedDOB ?? DateTime(2000),
+      firstDate: DateTime(1990),
+      lastDate: DateTime.now(),
+    );
+    if (date != null) {
+      setState(() {
+        selectedDOB = date;
+        dob.text = "${date.day}-${date.month}-${date.year}";
+      });
+    }
+  }
+
+  void save() {
+    if (name.text.isEmpty || reg.text.isEmpty || fatherName.text.isEmpty || motherName.text.isEmpty) return;
+
+    context.read<StudentData>().addStudent(
+      Student(
+        id: DateTime.now().millisecondsSinceEpoch,
+        registerNumber: reg.text,
+        name: name.text,
+        course: course.text,
+        dob: selectedDOB ?? DateTime.now(),
+        address: address.text,
+        studentMobile: studentMobile.text,
+        fatherName: fatherName.text,
+        fatherMobile: fatherMobile.text,
+        motherName: motherName.text,
+        motherMobile: motherMobile.text,
+        guardianName: guardianName.text.isEmpty ? null : guardianName.text,
+        guardianMobile: guardianMobile.text.isEmpty ? null : guardianMobile.text,
+      ),
+    );
+
+    Navigator.pop(context);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: const Text("Add Student")),
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          children: [
+            TextField(controller: name, decoration: const InputDecoration(labelText: "Name")),
+            TextField(controller: reg, decoration: const InputDecoration(labelText: "Register No")),
+            TextField(controller: course, decoration: const InputDecoration(labelText: "Course")),
+            TextField(
+              controller: dob,
+              readOnly: true,
+              onTap: pickDOB,
+              decoration: const InputDecoration(labelText: "Date of Birth"),
+            ),
+            TextField(controller: address, decoration: const InputDecoration(labelText: "Address")),
+            TextField(controller: studentMobile, decoration: const InputDecoration(labelText: "Student Mobile")),
+            TextField(controller: fatherName, decoration: const InputDecoration(labelText: "Father Name")),
+            TextField(controller: fatherMobile, decoration: const InputDecoration(labelText: "Father Mobile")),
+            TextField(controller: motherName, decoration: const InputDecoration(labelText: "Mother Name")),
+            TextField(controller: motherMobile, decoration: const InputDecoration(labelText: "Mother Mobile")),
+            TextField(controller: guardianName, decoration: const InputDecoration(labelText: "Guardian Name (Optional)")),
+            TextField(controller: guardianMobile, decoration: const InputDecoration(labelText: "Guardian Mobile (Optional)")),
+            const SizedBox(height: 20),
+            ElevatedButton(onPressed: save, child: const Text("Save")),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// ================= SEARCH STUDENT =================
+class SearchScreen extends StatefulWidget {
+  const SearchScreen({super.key});
+
+  @override
+  State<SearchScreen> createState() => _SearchScreenState();
+}
+
+class _SearchScreenState extends State<SearchScreen> {
+  String query = "";
+
+  @override
+  Widget build(BuildContext context) {
+    final results = context.watch<StudentData>().search(query);
+
+    return Scaffold(
+      appBar: AppBar(title: const Text("Search Student")),
+      body: Column(
+        children: [
+          Padding(
+            padding: const EdgeInsets.all(10),
+            child: TextField(
+              decoration: const InputDecoration(labelText: "Search by Name or Reg No"),
+              onChanged: (val) => setState(() => query = val),
+            ),
+          ),
+          Expanded(
+            child: ListView(
+              children: results
+                  .map((s) => ListTile(
+                title: Text("${s.name} (${s.registerNumber})"),
+                subtitle: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text("Course: ${s.course}"),
+                    Text("DOB: ${s.dob.day}-${s.dob.month}-${s.dob.year}"),
+                    Text("Address: ${s.address}"),
+                    Text("Student Mobile: ${s.studentMobile}"),
+                    Text("Father: ${s.fatherName} (${s.fatherMobile})"),
+                    Text("Mother: ${s.motherName} (${s.motherMobile})"),
+                    if (s.guardianName != null)
+                      Text("Guardian: ${s.guardianName} (${s.guardianMobile})"),
+                  ],
+                ),
+              ))
+                  .toList(),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// ================= STUDENT LIST =================
+class StudentListScreen extends StatelessWidget {
+  const StudentListScreen({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    final students = context.watch<StudentData>().students;
+
+    return Scaffold(
+      appBar: AppBar(title: const Text("Student List")),
+      body: ListView(
+        children: students
+            .map((s) => Card(
+          margin: const EdgeInsets.all(8),
+          child: ListTile(
+            title: Text("${s.name} (${s.registerNumber})"),
+            subtitle: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text("Course: ${s.course}"),
+                Text("DOB: ${s.dob.day}-${s.dob.month}-${s.dob.year}"),
+                Text("Address: ${s.address}"),
+                Text("Student Mobile: ${s.studentMobile}"),
+                Text("Father: ${s.fatherName} (${s.fatherMobile})"),
+                Text("Mother: ${s.motherName} (${s.motherMobile})"),
+                if (s.guardianName != null)
+                  Text("Guardian: ${s.guardianName} (${s.guardianMobile})"),
+              ],
+            ),
+            trailing: IconButton(
+              icon: const Icon(Icons.delete, color: Colors.red),
+              onPressed: () => context.read<StudentData>().deleteStudent(s.id),
+            ),
+          ),
+        ))
+            .toList(),
+      ),
+    );
+  }
+}
